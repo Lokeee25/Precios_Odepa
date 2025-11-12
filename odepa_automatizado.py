@@ -26,11 +26,19 @@ def descargar_boletin(url=URL_EXCEL, destino=ARCHIVO_EXCEL):
 def procesar_boletin():
     """Lee y filtra los datos de tomate del boletín"""
     try:
-        df = pd.read_excel(ARCHIVO_EXCEL, sheet_name=HOJA, header=8)
+        # 👇 Aquí está el cambio importante: se especifica el motor "openpyxl"
+        df = pd.read_excel(ARCHIVO_EXCEL, sheet_name=HOJA, header=8, engine="openpyxl")
+
+        # Limpieza de nombres de columnas
         df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
 
+        # Buscar columna de especie o producto
         col_especie = [c for c in df.columns if "especie" in c or "producto" in c][0]
+
+        # Filtrar registros de tomate
         df_tomate = df[df[col_especie].str.contains("tomate", case=False, na=False)].copy()
+
+        # Agregar fecha actual
         df_tomate["fecha"] = date.today().isoformat()
         print(f"✅ Registros de tomate encontrados: {len(df_tomate)}")
         return df_tomate
