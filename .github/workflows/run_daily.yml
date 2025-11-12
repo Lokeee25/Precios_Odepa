@@ -5,6 +5,9 @@ on:
     - cron: '0 9 * * *'  # Ejecutar todos los días a las 09:00 UTC (~06:00 Chile)
   workflow_dispatch:
 
+permissions:
+  contents: write   # 🟢 Permitir commits y push al repositorio
+
 jobs:
   actualizar:
     runs-on: ubuntu-latest
