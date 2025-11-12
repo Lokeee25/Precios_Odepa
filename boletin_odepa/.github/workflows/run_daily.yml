@@ -1,1 +1,34 @@
+name: Actualización diaria ODEPA
 
+on:
+  schedule:
+    - cron: "0 12 * * *"  # Ejecutar todos los días a las 12:00 UTC (~9:00 Chile)
+  workflow_dispatch:      # Permite ejecución manual
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r requirements.txt
+
+      - name: Ejecutar script de ODEPA
+        run: |
+          python odepa_automatizado.py
+
+      - name: Guardar base de datos actualizada
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Actualización automática del boletín diario"
+          branch: main
+          file_pattern: boletin_odepa.db
