@@ -3,7 +3,7 @@ name: Descargar boletín ODEPA diario
 on:
   schedule:
     - cron: '0 9 * * *'  # Ejecutar todos los días a las 09:00 UTC (~06:00 Chile)
-  workflow_dispatch:      # Permite ejecución manual desde GitHub
+  workflow_dispatch:
 
 jobs:
   actualizar:
@@ -13,6 +13,11 @@ jobs:
       - name: Clonar repositorio
         uses: actions/checkout@v3
 
+      - name: Mostrar estructura del repositorio
+        run: |
+          echo "Contenido actual:"
+          ls -R
+
       - name: Configurar Python
         uses: actions/setup-python@v4
         with:
@@ -20,11 +25,13 @@ jobs:
 
       - name: Instalar dependencias
         run: |
-          pip install -r requirements.txt
+          echo "Instalando dependencias..."
+          pip install -r ./requirements.txt || (echo "No se encontró requirements.txt" && exit 1)
 
       - name: Ejecutar script de descarga y análisis
         run: |
-          python odepa_automatizado.py
+          echo "Ejecutando script principal..."
+          python ./odepa_automatizado.py
 
       - name: Subir cambios al repositorio
         run: |
