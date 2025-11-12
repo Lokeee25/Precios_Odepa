@@ -10,32 +10,37 @@ ARCHIVO_EXCEL = "boletin_diario.xlsx"
 ARCHIVO_DB = "boletin_odepa.db"
 HOJA = "Hortalizas_Lo Valledor"
 
-# === Funciones ===
+
 def descargar_boletin(url=URL_EXCEL, destino=ARCHIVO_EXCEL):
-    """Descarga el boletín diario de ODEPA con headers adecuados"""
+    """Descarga el boletín diario con una sesión persistente y headers reales"""
     try:
+        session = requests.Session()
         headers = {
             "User-Agent": (
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
+                "Chrome/122.0.0.0 Safari/537.36"
             ),
             "Accept": (
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, "
-                "application/vnd.ms-excel;q=0.9, */*;q=0.8"
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,"
+                "application/vnd.ms-excel;q=0.9,*/*;q=0.8"
             ),
             "Referer": "https://www.odepa.gob.cl/",
+            "Connection": "keep-alive",
         }
 
-        r = requests.get(url, headers=headers, timeout=30)
+        # 1️⃣ Primero entrar a la página raíz para obtener cookies válidas
+        session.get("https://www.odepa.gob.cl", headers=headers, timeout=20)
+
+        # 2️⃣ Luego descargar el archivo Excel real
+        r = session.get(url, headers=headers, timeout=40, allow_redirects=True)
         r.raise_for_status()
 
-        # Validar tipo de archivo
-        content_type = r.headers.get("Content-Type", "")
-        if "application/vnd.openxmlformats" not in content_type:
-            print("⚠️ El archivo descargado no parece ser un Excel válido.")
-            print("Tipo detectado:", content_type)
-            print("Primeros bytes:", r.content[:200])
+        # Validar si es realmente un Excel
+        if "application/vnd.openxmlformats" not in r.headers.get("Content-Type", ""):
+            print("⚠️ El servidor devolvió HTML en lugar del Excel, se guardará para inspección...")
+            with open("respuesta_odepa.html", "wb") as f:
+                f.write(r.content)
             return False
 
         with open(destino, "wb") as f:
@@ -50,12 +55,11 @@ def descargar_boletin(url=URL_EXCEL, destino=ARCHIVO_EXCEL):
 
 
 def procesar_boletin():
-    """Lee y filtra los datos de tomate del boletín"""
+    """Lee y filtra los datos de tomate"""
     try:
         df = pd.read_excel(ARCHIVO_EXCEL, sheet_name=HOJA, header=8, engine="openpyxl")
         df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
 
-        # Buscar columna con el nombre del producto/especie
         col_especie = [c for c in df.columns if "especie" in c or "producto" in c]
         if not col_especie:
             raise ValueError("No se encontró columna de especie o producto.")
@@ -73,18 +77,16 @@ def procesar_boletin():
 
 
 def guardar_en_sqlite(df):
-    """Guarda los datos en la base SQLite"""
+    """Guarda los datos"""
     if df.empty:
         print("⚠️ No hay datos para guardar.")
         return
-
     conn = sqlite3.connect(ARCHIVO_DB)
     df.to_sql("tomate", conn, if_exists="append", index=False)
     conn.close()
     print(f"💾 Datos guardados en {ARCHIVO_DB}")
 
 
-# === Ejecución principal ===
 def main():
     print("=== Ejecución automática boletín ODEPA ===")
     if descargar_boletin():
