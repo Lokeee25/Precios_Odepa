@@ -2,18 +2,18 @@ name: Actualizar Base de Datos ODEPA
 
 on:
   schedule:
-    - cron: "0 16 * * *"   # → 13:00 UTC ≈ 10:00 Chile (dependiendo del horario)
+    - cron: "0 16 * * *"   # corre todos los días
   workflow_dispatch:
 
 permissions:
-  contents: write      # Necesario para permitir git push
+  contents: write
 
 jobs:
   actualizar:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clonar repo
+      - name: Clonar repositorio
         uses: actions/checkout@v3
 
       - name: Instalar Python
@@ -27,9 +27,14 @@ jobs:
 
       - name: Ejecutar script de actualización
         env:
-          GITHUB_ACTIONS: "true"   # Activa el auto-push del script
+          GITHUB_ACTIONS: "true"
         run: python procesar_boletines.py
 
-      # ⛔️ El commit/push ya lo hace tu script interno, así que esto NO se usa:
-      # - name: Commit manual
-      #   run: ...
+      - name: Commit forzado diario (aunque no cambie nada)
+        run: |
+          git config --local user.email "github-actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add -A
+          git commit --allow-empty -m "Auto-update $(date)"
+          git push
+
